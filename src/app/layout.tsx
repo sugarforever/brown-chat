@@ -4,7 +4,7 @@ import AuthProvider from "../components/AuthProvider";
 import Navbar from "@/components/Navbar";
 import { Analytics } from "@vercel/analytics/react"
 import React from 'react';
-import { MessageSquare, Settings } from 'lucide-react';
+import { MessageSquare, Settings, Github } from 'lucide-react';
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -30,9 +30,20 @@ export default function RootLayout({
         >
           {/* Left Navigation Panel */}
           <nav className="w-64 border-r border-gray-200 dark:border-gray-800 h-full flex flex-col">
-            {/* Brand */}
+            {/* Brand and GitHub link */}
             <div className="p-4 border-b border-gray-200 dark:border-gray-800">
-              <h1 className="text-xl font-bold">BrownChat</h1>
+              <div className="flex items-center justify-between">
+                <h1 className="text-xl font-bold">BrownChat</h1>
+                <a
+                  href="https://github.com/sugarforever/brown-chat"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition-all duration-200 hover:scale-105 hover:shadow-sm"
+                  title="View source on GitHub"
+                >
+                  <Github className="w-5 h-5" />
+                </a>
+              </div>
             </div>
 
             {/* Navigation Items */}
