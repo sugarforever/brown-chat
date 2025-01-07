@@ -6,7 +6,7 @@ import { SchemaType } from "@google/generative-ai";
 import IconMicrophone from './icons/IconMicrophone';
 import IconSpinner from './icons/IconSpinner';
 import IconStop from './icons/IconStop';
-import GeminiLogo from './icons/GeminiLogo';
+import { Mic } from 'lucide-react';
 
 interface GeminiProps {
   defaultExpanded?: boolean;
@@ -57,6 +57,12 @@ const Gemini: React.FC<GeminiProps> = ({
     disconnected: 'Tap to start conversation',
   }[connectionStatus];
 
+  // Update isExpanded when defaultExpanded changes
+  useEffect(() => {
+    setIsExpanded(defaultExpanded);
+  }, [defaultExpanded]);
+
+  // Notify parent of expansion state changes
   useEffect(() => {
     onExpandedChange?.(isExpanded);
   }, [isExpanded, onExpandedChange]);
@@ -248,33 +254,37 @@ const Gemini: React.FC<GeminiProps> = ({
     }
   };
 
+  const handleExpand = (expand: boolean) => {
+    setIsExpanded(expand);
+  };
+
   return (
-    <div className="fixed bottom-4 right-4 z-50">
+    <div className="">
       {!isExpanded ? (
         <div
-          onClick={() => setIsExpanded(true)}
+          onClick={() => handleExpand(true)}
           className="cursor-pointer bg-white dark:bg-gray-800 rounded-full border border-gray-200 dark:border-gray-700 p-4 hover:border-primary-500 dark:hover:border-primary-500 transition-all shadow-sm hover:shadow"
         >
-          <div className="w-10 h-10">
-            <GeminiLogo className="w-full h-full" />
+          <div className="w-10 h-10 flex items-center justify-center text-gray-600 dark:text-gray-400">
+            <Mic className="w-6 h-6" />
           </div>
         </div>
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 w-[450px] overflow-hidden shadow-md">
           <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 rounded-t-lg">
             <div className="flex items-center">
-              <div className="w-8 h-8 mr-2">
-                <GeminiLogo className="w-full h-full" />
+              <div className="w-8 h-8 mr-2 flex items-center justify-center text-gray-600 dark:text-gray-400">
+                <Mic className="w-5 h-5" />
               </div>
               <div className="flex flex-col">
-                <span className="font-semibold text-gray-900 dark:text-gray-100">Charlie Gemini</span>
+                <span className="font-semibold text-gray-900 dark:text-gray-100">Voice Chat</span>
                 <span className="text-xs text-gray-500 dark:text-gray-400">
                   Powered by <span className="font-mono bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-primary-600 dark:text-primary-400">gemini-2.0-flash-exp</span>
                 </span>
               </div>
             </div>
             <button
-              onClick={() => setIsExpanded(false)}
+              onClick={() => handleExpand(false)}
               className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             >
               <span className="text-xl">×</span>

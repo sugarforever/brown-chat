@@ -1,113 +1,84 @@
 'use client';
 
-import Gemini from "@/components/Gemini";
+import { Gauge, Mic, Github } from 'lucide-react';
+import BrownChatLogo from '@/components/icons/BrownChatLogo';
+import { SettingsForm } from '@/components/SettingsForm';
+import { useState } from 'react';
+import dynamic from 'next/dynamic';
+
+const Gemini = dynamic(() => import('@/components/Gemini'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-[42px] h-[42px] animate-pulse bg-gray-100 dark:bg-gray-800 rounded-full" />
+  )
+});
 
 export default function Home() {
+  const [showSettings, setShowSettings] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+
   return (
-    <div className="h-full flex flex-col space-y-12 justify-center">
-      {/* Welcome Section - more compact */}
-      <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold">Welcome to BrownChat</h1>
-        <p className="text-base text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+    <div className="w-full max-w-2xl mx-auto flex flex-col items-center justify-center space-y-8 py-16">
+      {/* Logo and Brand */}
+      <div className="flex flex-col items-center space-y-6">
+        <div className="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-2xl p-4">
+          <BrownChatLogo className="w-full h-full" />
+        </div>
+        <h1 className="text-4xl font-bold">BrownChat</h1>
+        <p className="text-gray-600 dark:text-gray-400 text-center max-w-lg">
           Your Gemini 2.0 Multimodal Live API powered realtime voice chatbot.
         </p>
+        <a
+          href="https://github.com/sugarforever/brown-chat"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 text-indigo-700 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-all duration-200 hover:scale-105"
+        >
+          <Github className="w-5 h-5" />
+          <span>GitHub</span>
+        </a>
       </div>
 
-      {/* Features Grid - reduced padding and spacing */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-800">
-          <h3 className="font-semibold mb-1">Voice Interaction</h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Natural voice conversations with{' '}
-            <code className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 font-mono text-primary-600 dark:text-primary-400">
-              gemini-2.0-flash-exp
-            </code>
-          </p>
-        </div>
-        <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-800">
-          <h3 className="font-semibold mb-1">Realtime Response</h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Get instant AI responses via bidirectional audio streaming
-          </p>
-        </div>
-        <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-800">
-          <h3 className="font-semibold mb-1">Web Search</h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Configurable web search powered by{' '}
-            <a
-              href="https://tavily.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary-600 dark:text-primary-400 hover:underline"
-            >
-              Tavily
-            </a>
-          </p>
-        </div>
+      {/* Action Buttons */}
+      <div className="flex items-center gap-4 mt-8">
+        <button
+          onClick={() => setShowSettings(!showSettings)}
+          className="flex items-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg transition-colors"
+        >
+          <Gauge className="w-5 h-5" />
+          <span>Settings</span>
+        </button>
+        <button
+          onClick={() => setShowChat(true)}
+          className="flex items-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg transition-colors"
+        >
+          <Mic className="w-5 h-5" />
+          <span>Start Chat</span>
+        </button>
       </div>
 
-      {/* Getting Started Section - redesigned */}
-      <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900/50 dark:to-gray-800/50 rounded-xl p-6 shadow-sm">
-        <h2 className="text-lg font-semibold mb-4 flex items-center">
-          <span className="bg-primary-500/10 dark:bg-primary-400/10 text-primary-600 dark:text-primary-400 p-2 rounded-lg mr-2">
-            🚀
-          </span>
-          Getting Started
-        </h2>
+      {/* Settings Form */}
+      {showSettings && (
+        <div className="w-full mt-8">
+          <SettingsForm />
+        </div>
+      )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="flex items-start space-x-3">
-            <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-primary-500/10 text-primary-600 dark:text-primary-400">
-              1
-            </div>
-            <div>
-              <h3 className="font-medium mb-1">Configure API Keys</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Set up your Gemini and Tavily API keys in Settings
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start space-x-3">
-            <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-primary-500/10 text-primary-600 dark:text-primary-400">
-              2
-            </div>
-            <div>
-              <h3 className="font-medium mb-1">Start Conversation</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Click the microphone icon below to begin
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start space-x-3">
-            <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-primary-500/10 text-primary-600 dark:text-primary-400">
-              3
-            </div>
-            <div>
-              <h3 className="font-medium mb-1">Speak Naturally</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Have a natural conversation with the AI assistant
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start space-x-3">
-            <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-primary-500/10 text-primary-600 dark:text-primary-400">
-              4
-            </div>
-            <div>
-              <h3 className="font-medium mb-1">End Chat</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Click the stop button when you're done
-              </p>
-            </div>
+      {/* Chat Interface */}
+      {showChat && (
+        <div className="fixed bottom-4 flex justify-center z-50">
+          <div className="w-full max-w-2xl">
+            <Gemini
+              defaultExpanded={showChat}
+              onExpandedChange={(expanded) => {
+                if (!expanded) {
+                  setShowChat(false);
+                }
+              }}
+            />
           </div>
         </div>
-      </div>
-
-      {/* Chat Interface - adjusted height */}
-      <Gemini defaultExpanded={true} />
+      )}
     </div>
   );
 }
