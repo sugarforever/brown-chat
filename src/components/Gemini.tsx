@@ -124,6 +124,7 @@ const Gemini: React.FC<GeminiProps> = ({
         wsClientRef.current?.sendToolResponse({
           functionResponses: [{
             id: functionCall.id,
+            name: declaration.name,
             response: { output: formattedResults }
           }]
         });
@@ -133,6 +134,7 @@ const Gemini: React.FC<GeminiProps> = ({
         wsClientRef.current?.sendToolResponse({
           functionResponses: [{
             id: functionCall.id,
+            name: declaration.name,
             response: { output: `Error performing search: ${error.message}` }
           }]
         });

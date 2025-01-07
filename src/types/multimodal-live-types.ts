@@ -1,58 +1,58 @@
-import { Content, GenerativeContentBlob, Part } from "@google/generative-ai"
+import { Content, FunctionResponse, GenerativeContentBlob, Part } from "@google/generative-ai"
 
 export interface StreamingLog {
-    date: Date
-    type: string
-    message: string | object
+  date: Date
+  type: string
+  message: string | object
 }
 
 export interface LiveConfig {
-    model: string
-    generationConfig?: {
-        temperature?: number
-        topP?: number
-        topK?: number
-        responseModalities?: string[]
-        speechConfig?: {
-            voiceConfig?: {
-                prebuiltVoiceConfig?: {
-                    voiceName?: string
-                }
-            }
+  model: string
+  generationConfig?: {
+    temperature?: number
+    topP?: number
+    topK?: number
+    responseModalities?: string[]
+    speechConfig?: {
+      voiceConfig?: {
+        prebuiltVoiceConfig?: {
+          voiceName?: string
         }
+      }
     }
-    tools?: any[]
+  }
+  tools?: any[]
 }
 
 export interface SetupMessage {
-    setup: LiveConfig
+  setup: LiveConfig
 }
 
 export interface RealtimeInputMessage {
-    realtimeInput: {
-        mediaChunks: GenerativeContentBlob[]
-    }
+  realtimeInput: {
+    mediaChunks: GenerativeContentBlob[]
+  }
 }
 
 export interface ClientContentMessage {
-    clientContent: {
-        turns: Content[]
-        turnComplete: boolean
-    }
+  clientContent: {
+    turns: Content[]
+    turnComplete: boolean
+  }
 }
 
 export interface ModelTurn {
-    modelTurn: {
-        parts: Part[]
-    }
+  modelTurn: {
+    parts: Part[]
+  }
 }
 
 export interface ServerContent {
-    interrupted?: boolean
-    end_of_turn?: boolean
-    modelTurn?: {
-        parts: Part[]
-    }
+  interrupted?: boolean
+  end_of_turn?: boolean
+  modelTurn?: {
+    parts: Part[]
+  }
 }
 
 export interface FunctionCall {
@@ -61,51 +61,54 @@ export interface FunctionCall {
   name: string
 }
 export interface ToolCall {
-    functionCalls: FunctionCall[]
+  functionCalls: FunctionCall[]
 }
 
 export interface ToolCallCancellation {
-    call_id: string
+  call_id: string
+}
+
+export interface FunctionResponseWithId extends FunctionResponse {
+  id: string
 }
 
 export interface ToolResponseMessage {
-    toolResponse: {
-        call_id: string
-        output: string
-    }
+  toolResponse: {
+    functionResponses: FunctionResponseWithId[]
+  }
 }
 
 export interface LiveIncomingMessage {
-    serverContent?: ServerContent
-    toolCall?: ToolCall
-    toolCallCancellation?: ToolCallCancellation
-    setupComplete?: boolean
+  serverContent?: ServerContent
+  toolCall?: ToolCall
+  toolCallCancellation?: ToolCallCancellation
+  setupComplete?: boolean
 }
 
 export function isServerContentMessage(msg: LiveIncomingMessage): boolean {
-    return 'serverContent' in msg
+  return 'serverContent' in msg
 }
 
 export function isToolCallMessage(msg: LiveIncomingMessage): boolean {
-    return 'toolCall' in msg
+  return 'toolCall' in msg
 }
 
 export function isToolCallCancellationMessage(msg: LiveIncomingMessage): boolean {
-    return 'toolCallCancellation' in msg
+  return 'toolCallCancellation' in msg
 }
 
 export function isSetupCompleteMessage(msg: LiveIncomingMessage): boolean {
-    return 'setupComplete' in msg
+  return 'setupComplete' in msg
 }
 
 export function isInterrupted(content: ServerContent): boolean {
-    return content.interrupted === true
+  return content.interrupted === true
 }
 
 export function isTurnComplete(content: ServerContent): boolean {
-    return content.end_of_turn === true
+  return content.end_of_turn === true
 }
 
 export function isModelTurn(content: ServerContent): boolean {
-    return 'modelTurn' in content
+  return 'modelTurn' in content
 }
