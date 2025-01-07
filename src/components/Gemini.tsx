@@ -44,10 +44,10 @@ const Gemini: React.FC<GeminiProps> = ({
 
   const buttonStyles = `w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 relative ${
     connectionStatus === 'disconnected'
-      ? 'bg-primary-500 hover:bg-primary-600 dark:bg-primary-700 dark:hover:bg-primary-800 text-white'
+      ? 'bg-primary-500 hover:bg-primary-600 dark:bg-primary-700 dark:hover:bg-primary-800 text-primary-500'
       : connectionStatus === 'connecting'
       ? 'bg-yellow-500 dark:bg-yellow-600 cursor-not-allowed'
-      : 'bg-red-500 hover:bg-red-600 dark:bg-red-700 dark:hover:bg-red-800 text-white'
+      : 'bg-red-500 hover:bg-red-600 dark:bg-red-700 dark:hover:bg-red-800 text-primary-500'
   }`;
 
   const statusText = {
@@ -72,10 +72,10 @@ const Gemini: React.FC<GeminiProps> = ({
 
     if (functionCall) {
       try {
-        const tavilyApiKey = process.env.NEXT_PUBLIC_TAVILY_API_KEY;
+        const tavilyApiKey = localStorage.getItem('tavily-api-key');
 
         if (!tavilyApiKey) {
-          throw new Error('Tavily API key not found');
+          throw new Error('Tavily API key not found. Please configure it in Settings.');
         }
 
         const response = await fetch('https://api.tavily.com/search', {
@@ -149,10 +149,10 @@ const Gemini: React.FC<GeminiProps> = ({
       setConnectionStatus('connecting');
       setError('');
 
-      const GEMINI_API_KEY = localStorage.getItem('gemini_api_key');
+      const GEMINI_API_KEY = localStorage.getItem('gemini-api-key');
 
       if (!GEMINI_API_KEY) {
-        throw new Error('Gemini API key not found');
+        throw new Error('Gemini API key not found. Please configure it in Settings.');
       }
 
       audioContextRef.current = new AudioContext();
@@ -198,7 +198,7 @@ const Gemini: React.FC<GeminiProps> = ({
       });
 
       const tools = [];
-      const tavilyApiKey = process.env.NEXT_PUBLIC_TAVILY_API_KEY;
+      const tavilyApiKey = localStorage.getItem('tavily-api-key');
 
       if (tavilyApiKey) {
         tools.push({ functionDeclarations: [declaration] });
@@ -262,7 +262,7 @@ const Gemini: React.FC<GeminiProps> = ({
               </div>
               <div className="flex flex-col">
                 <span className="font-semibold text-gray-900 dark:text-gray-100">Charlie Gemini</span>
-                <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                <span className="text-xs text-gray-500 dark:text-gray-400">
                   Powered by <span className="font-mono bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-primary-600 dark:text-primary-400">gemini-2.0-flash-exp</span>
                 </span>
               </div>

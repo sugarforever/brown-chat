@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
+import { Settings } from "lucide-react";
 
 export default function Navbar() {
   const { data: session } = useSession();
@@ -21,7 +22,14 @@ export default function Navbar() {
           <div className="flex items-center">
             <div className="ml-10 flex items-baseline space-x-4">
               <Link href="/" className="text-gray-600 hover:text-gray-900">
-                首页
+                Home
+              </Link>
+              <Link
+                href="/settings"
+                className="text-gray-600 hover:text-gray-900 flex items-center gap-1"
+              >
+                <Settings className="w-4 h-4" />
+                Settings
               </Link>
             </div>
           </div>
@@ -38,7 +46,7 @@ export default function Navbar() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuItem className="justify-end" onClick={() => signOut()}>
-                      退出登录
+                      Sign Out
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -48,7 +56,7 @@ export default function Navbar() {
                 variant="ghost"
                 onClick={() => signIn("google")}
               >
-                登录
+                Sign In
               </Button>
             )}
           </div>
