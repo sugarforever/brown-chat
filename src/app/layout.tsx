@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   keywords: ['Gemini 2.0', 'voice chat', 'AI assistant', 'multimodal AI', 'real-time chat', 'voice assistant'],
   authors: [{ name: 'VerySmallWoods' }],
   openGraph: {
-    title: 'BrownChat - Gemini 2.0 Voice Chat',
+    title: 'BrownChat - Gemini 2.0 Voice Chatbot',
     description: 'Your Gemini 2.0 Multimodal Live API powered realtime voice chatbot.',
     url: 'https://brownchat.io',
     siteName: 'BrownChat',
