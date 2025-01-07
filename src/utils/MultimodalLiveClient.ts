@@ -27,6 +27,7 @@ import { blobToJSON, base64ToArrayBuffer } from "./multimodal-live"
  * the events that this client will emit
  */
 interface MultimodalLiveClientEventTypes {
+  error: (error: Error) => void
   open: () => void
   log: (log: StreamingLog) => void
   close: (event: CloseEvent) => void

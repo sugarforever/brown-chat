@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { AudioRecorder } from '../utils/audio-recorder';
 import { AudioStreamer } from '../utils/audio-streamer';
 import { MultimodalLiveClient } from '../utils/MultimodalLiveClient';
@@ -7,6 +7,7 @@ import IconMicrophone from './icons/IconMicrophone';
 import IconSpinner from './icons/IconSpinner';
 import IconStop from './icons/IconStop';
 import { Mic } from 'lucide-react';
+import { ToolCall } from '@/types/multimodal-live-types';
 
 interface GeminiProps {
   defaultExpanded?: boolean;
@@ -20,7 +21,6 @@ const Gemini: React.FC<GeminiProps> = ({
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
   const [error, setError] = useState<string>('');
-  const [jsonString, setJsonString] = useState<string>('');
 
   const wsClientRef = useRef<MultimodalLiveClient | null>(null);
   const audioRecorderRef = useRef<AudioRecorder>(new AudioRecorder());
@@ -57,6 +57,82 @@ const Gemini: React.FC<GeminiProps> = ({
     disconnected: 'Tap to start conversation',
   }[connectionStatus];
 
+  const updateConnectionStatus = (status: 'disconnected' | 'connecting' | 'connected') => {
+    setConnectionStatus(status);
+    connectionStatusRef.current = status;
+  };
+
+  // Define stopConnection first since it's simpler and doesn't depend on handleToolCall
+  const stopConnection = useCallback(() => {
+    if (wsClientRef.current) {
+      wsClientRef.current.disconnect();
+      wsClientRef.current = null;
+    }
+    audioRecorderRef.current.stop();
+    if (audioStreamerRef.current) {
+      audioStreamerRef.current.stop();
+      audioStreamerRef.current = null;
+    }
+    updateConnectionStatus('disconnected');
+  }, []);
+
+  // Then define handleToolCall
+  const handleToolCall = useCallback(async (toolCall: ToolCall) => {
+    try {
+      const tavilyApiKey = localStorage.getItem('tavily-api-key');
+
+      if (!tavilyApiKey) {
+        throw new Error('Tavily API key not found. Please configure it in Settings.');
+      }
+
+      const response = await fetch('https://api.tavily.com/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          api_key: tavilyApiKey,
+          query: JSON.parse(toolCall.arguments).query,
+          search_depth: "basic",
+          include_answer: false,
+          include_images: true,
+          include_image_descriptions: true,
+          include_raw_content: false,
+          max_results: 5,
+        })
+      });
+
+      const data = await response.json();
+      let formattedResults = 'Search Results:\n\n';
+
+      data.results.forEach((result: any, index: number) => {
+        formattedResults += `${index + 1}. ${result.title}\n`;
+        formattedResults += `URL: ${result.url}\n`;
+        formattedResults += `Content: ${result.content}\n\n`;
+      });
+
+      if (data.images?.length > 0) {
+        formattedResults += '\nRelevant Images:\n';
+        data.images.forEach((image: any, index: number) => {
+          formattedResults += `${index + 1}. ${image.description}\n`;
+          formattedResults += `URL: ${image.url}\n\n`;
+        });
+      }
+
+      wsClientRef.current?.sendToolResponse({
+        call_id: toolCall.call_id,
+        output: formattedResults
+      });
+
+    } catch (error: any) {
+      console.error('Tavily search error:', error);
+      wsClientRef.current?.sendToolResponse({
+        call_id: toolCall.call_id,
+        output: `Error performing search: ${error.message}`
+      });
+    }
+  }, []);
+
   // Update isExpanded when defaultExpanded changes
   useEffect(() => {
     setIsExpanded(defaultExpanded);
@@ -70,91 +146,12 @@ const Gemini: React.FC<GeminiProps> = ({
   // Clean up on unmount
   useEffect(() => {
     return () => {
+      if (wsClientRef.current) {
+        wsClientRef.current.off('toolcall', handleToolCall);
+      }
       stopConnection();
     };
-  }, []);
-
-  const handleToolCall = async (toolCall: any) => {
-    const functionCall = toolCall.functionCalls.find((fc: any) => fc.name === declaration.name);
-
-    if (functionCall) {
-      try {
-        const tavilyApiKey = localStorage.getItem('tavily-api-key');
-
-        if (!tavilyApiKey) {
-          throw new Error('Tavily API key not found. Please configure it in Settings.');
-        }
-
-        const response = await fetch('https://api.tavily.com/search', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            api_key: tavilyApiKey,
-            query: functionCall.args.query,
-            search_depth: "basic",
-            include_answer: false,
-            include_images: true,
-            include_image_descriptions: true,
-            include_raw_content: false,
-            max_results: 5,
-          })
-        });
-
-        const data = await response.json();
-        let formattedResults = 'Search Results:\n\n';
-
-        data.results.forEach((result: any, index: number) => {
-          formattedResults += `${index + 1}. ${result.title}\n`;
-          formattedResults += `URL: ${result.url}\n`;
-          formattedResults += `Content: ${result.content}\n\n`;
-        });
-
-        if (data.images?.length > 0) {
-          formattedResults += '\nRelevant Images:\n';
-          data.images.forEach((image: any, index: number) => {
-            formattedResults += `${index + 1}. ${image.description}\n`;
-            formattedResults += `URL: ${image.url}\n\n`;
-          });
-        }
-
-        wsClientRef.current?.sendToolResponse({
-          functionResponses: [{
-            response: { output: formattedResults },
-            id: functionCall.id
-          }]
-        });
-
-      } catch (error: any) {
-        console.error('Tavily search error:', error);
-        wsClientRef.current?.sendToolResponse({
-          functionResponses: [{
-            response: { output: `Error performing search: ${error.message}` },
-            id: functionCall.id
-          }]
-        });
-      }
-    }
-  };
-
-  const updateConnectionStatus = (status: 'disconnected' | 'connecting' | 'connected') => {
-    setConnectionStatus(status);
-    connectionStatusRef.current = status;
-  };
-
-  const stopConnection = async () => {
-    if (wsClientRef.current) {
-      wsClientRef.current.disconnect();
-      wsClientRef.current = null;
-    }
-    audioRecorderRef.current.stop();
-    if (audioStreamerRef.current) {
-      audioStreamerRef.current.stop();
-      audioStreamerRef.current = null;
-    }
-    updateConnectionStatus('disconnected');
-  };
+  }, [stopConnection, handleToolCall]);
 
   const initConnection = async () => {
     try {
@@ -197,7 +194,7 @@ const Gemini: React.FC<GeminiProps> = ({
         stopConnection();
       });
 
-      wsClientRef.current.on('error', (err) => {
+      wsClientRef.current.on('error', (err: Error) => {
         console.error('Gemini Event: WebSocket error:', err);
         setError(`Connection error: ${err.message}`);
         stopConnection();
@@ -208,6 +205,9 @@ const Gemini: React.FC<GeminiProps> = ({
           audioStreamerRef.current.addPCM16(new Uint8Array(audioData));
         }
       });
+
+      // Register tool call handler
+      wsClientRef.current.on('toolcall', handleToolCall);
 
       const tools = [];
       const tavilyApiKey = localStorage.getItem('tavily-api-key');
@@ -234,14 +234,16 @@ const Gemini: React.FC<GeminiProps> = ({
         text: "Hello!"
       });
 
-    } catch (err: any) {
-      console.error('Connection error:', err);
-      setError(`Failed to connect: ${err.message}`);
-      updateConnectionStatus('disconnected');
-      audioRecorderRef.current.stop();
-      if (audioStreamerRef.current) {
-        audioStreamerRef.current.stop();
-        audioStreamerRef.current = null;
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error('Connection error:', error);
+        setError(`Failed to connect: ${error.message}`);
+        updateConnectionStatus('disconnected');
+        audioRecorderRef.current.stop();
+        if (audioStreamerRef.current) {
+          audioStreamerRef.current.stop();
+          audioStreamerRef.current = null;
+        }
       }
     }
   };
@@ -334,12 +336,6 @@ const Gemini: React.FC<GeminiProps> = ({
                 </div>
               )}
 
-              {jsonString && (
-                <div className="mt-4 border rounded-lg p-4 bg-gray-50 dark:bg-gray-900">
-                  <pre className="text-xs overflow-auto max-h-40">{jsonString}</pre>
-                </div>
-              )}
-
               {error && (
                 <div className="text-red-500 dark:text-red-400 text-center text-sm">
                   {error}
@@ -354,19 +350,3 @@ const Gemini: React.FC<GeminiProps> = ({
 };
 
 export default Gemini;
-
-// Add this to your global CSS or as a styled component
-const styles = `
-@keyframes wave {
-  0%, 100% {
-    transform: scaleY(0.5);
-  }
-  50% {
-    transform: scaleY(1);
-  }
-}
-
-.animate-wave {
-  animation: wave 1s ease-in-out infinite;
-}
-`;
