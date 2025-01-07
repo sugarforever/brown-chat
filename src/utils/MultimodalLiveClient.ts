@@ -280,7 +280,6 @@ export class MultimodalLiveClient extends EventEmitter<MultimodalLiveClientEvent
       throw new Error("WebSocket is not connected")
     }
     const str = JSON.stringify(request)
-    console.log('Sending message:', str)
     this.ws.send(str)
   }
 }

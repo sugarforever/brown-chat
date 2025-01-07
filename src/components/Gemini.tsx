@@ -43,13 +43,12 @@ const Gemini: React.FC<GeminiProps> = ({
     },
   };
 
-  const buttonStyles = `w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 relative ${
-    connectionStatus === 'disconnected'
+  const buttonStyles = `w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 relative ${connectionStatus === 'disconnected'
       ? 'bg-primary-500 hover:bg-primary-600 dark:bg-primary-700 dark:hover:bg-primary-800 text-primary-500'
       : connectionStatus === 'connecting'
-      ? 'bg-yellow-500 dark:bg-yellow-600 cursor-not-allowed'
-      : 'bg-red-500 hover:bg-red-600 dark:bg-red-700 dark:hover:bg-red-800 text-primary-500'
-  }`;
+        ? 'bg-yellow-500 dark:bg-yellow-600 cursor-not-allowed'
+        : 'bg-red-500 hover:bg-red-600 dark:bg-red-700 dark:hover:bg-red-800 text-primary-500'
+    }`;
 
   const statusText = {
     connecting: 'Initializing connection...',
@@ -78,58 +77,66 @@ const Gemini: React.FC<GeminiProps> = ({
 
   // Then define handleToolCall
   const handleToolCall = useCallback(async (toolCall: ToolCall) => {
-    try {
-      const tavilyApiKey = localStorage.getItem('tavily-api-key');
+    const functionCall = toolCall.functionCalls.find(fc => fc.name === declaration.name)
 
-      if (!tavilyApiKey) {
-        throw new Error('Tavily API key not found. Please configure it in Settings.');
-      }
+    if (functionCall && functionCall.args) {
+      try {
+        const tavilyApiKey = localStorage.getItem('tavily-api-key');
 
-      const response = await fetch('https://api.tavily.com/search', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          api_key: tavilyApiKey,
-          query: JSON.parse(toolCall.arguments).query,
-          search_depth: "basic",
-          include_answer: false,
-          include_images: true,
-          include_image_descriptions: true,
-          include_raw_content: false,
-          max_results: 5,
-        })
-      });
+        if (!tavilyApiKey) {
+          throw new Error('Tavily API key not found. Please configure it in Settings.');
+        }
 
-      const data = await response.json();
-      let formattedResults = 'Search Results:\n\n';
+        const response = await fetch('https://api.tavily.com/search', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            api_key: tavilyApiKey,
+            query: functionCall.args.query,
+            search_depth: "basic",
+            include_answer: false,
+            include_images: true,
+            include_image_descriptions: true,
+            include_raw_content: false,
+            max_results: 5,
+          })
+        });
 
-      data.results.forEach((result: any, index: number) => {
-        formattedResults += `${index + 1}. ${result.title}\n`;
-        formattedResults += `URL: ${result.url}\n`;
-        formattedResults += `Content: ${result.content}\n\n`;
-      });
+        const data = await response.json();
+        let formattedResults = 'Search Results:\n\n';
 
-      if (data.images?.length > 0) {
-        formattedResults += '\nRelevant Images:\n';
-        data.images.forEach((image: any, index: number) => {
-          formattedResults += `${index + 1}. ${image.description}\n`;
-          formattedResults += `URL: ${image.url}\n\n`;
+        data.results.forEach((result: any, index: number) => {
+          formattedResults += `${index + 1}. ${result.title}\n`;
+          formattedResults += `URL: ${result.url}\n`;
+          formattedResults += `Content: ${result.content}\n\n`;
+        });
+
+        if (data.images?.length > 0) {
+          formattedResults += '\nRelevant Images:\n';
+          data.images.forEach((image: any, index: number) => {
+            formattedResults += `${index + 1}. ${image.description}\n`;
+            formattedResults += `URL: ${image.url}\n\n`;
+          });
+        }
+
+        wsClientRef.current?.sendToolResponse({
+          functionResponses: [{
+            id: functionCall.id,
+            response: { output: formattedResults }
+          }]
+        });
+
+      } catch (error: any) {
+        console.error('Tavily search error:', error);
+        wsClientRef.current?.sendToolResponse({
+          functionResponses: [{
+            id: functionCall.id,
+            response: { output: `Error performing search: ${error.message}` }
+          }]
         });
       }
-
-      wsClientRef.current?.sendToolResponse({
-        call_id: toolCall.call_id,
-        output: formattedResults
-      });
-
-    } catch (error: any) {
-      console.error('Tavily search error:', error);
-      wsClientRef.current?.sendToolResponse({
-        call_id: toolCall.call_id,
-        output: `Error performing search: ${error.message}`
-      });
     }
   }, []);
 

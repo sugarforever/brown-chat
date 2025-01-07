@@ -55,10 +55,13 @@ export interface ServerContent {
     }
 }
 
+export interface FunctionCall {
+  args?: Record<string, any>
+  id: string
+  name: string
+}
 export interface ToolCall {
-    name: string
-    arguments: string
-    call_id: string
+    functionCalls: FunctionCall[]
 }
 
 export interface ToolCallCancellation {
