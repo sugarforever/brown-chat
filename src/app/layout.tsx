@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import { Analytics } from "@vercel/analytics/react"
 import React from 'react';
 import { MessageSquare, Settings, Github } from 'lucide-react';
+import BrownChatLogo from "@/components/icons/BrownChatLogo";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -33,7 +34,10 @@ export default function RootLayout({
             {/* Brand and GitHub link */}
             <div className="p-4 border-b border-gray-200 dark:border-gray-800">
               <div className="flex items-center justify-between">
-                <h1 className="text-xl font-bold">BrownChat</h1>
+                <div className="flex items-center space-x-2">
+                  <BrownChatLogo className="w-8 h-8" />
+                  <h1 className="text-xl font-bold text-pink-900">BrownChat</h1>
+                </div>
                 <a
                   href="https://github.com/sugarforever/brown-chat"
                   target="_blank"
