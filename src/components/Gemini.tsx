@@ -26,6 +26,7 @@ const Gemini: React.FC<GeminiProps> = ({
   const audioRecorderRef = useRef<AudioRecorder>(new AudioRecorder());
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioStreamerRef = useRef<AudioStreamer | null>(null);
+  const connectionStatusRef = useRef<'disconnected' | 'connecting' | 'connected'>('disconnected');
 
   const declaration = {
     name: "tavily_search",
@@ -131,6 +132,11 @@ const Gemini: React.FC<GeminiProps> = ({
     }
   };
 
+  const updateConnectionStatus = (status: 'disconnected' | 'connecting' | 'connected') => {
+    setConnectionStatus(status);
+    connectionStatusRef.current = status;
+  };
+
   const stopConnection = async () => {
     if (wsClientRef.current) {
       wsClientRef.current.disconnect();
@@ -141,12 +147,12 @@ const Gemini: React.FC<GeminiProps> = ({
       audioStreamerRef.current.stop();
       audioStreamerRef.current = null;
     }
-    setConnectionStatus('disconnected');
+    updateConnectionStatus('disconnected');
   };
 
   const initConnection = async () => {
     try {
-      setConnectionStatus('connecting');
+      updateConnectionStatus('connecting');
       setError('');
 
       const GEMINI_API_KEY = localStorage.getItem('gemini-api-key');
@@ -168,9 +174,9 @@ const Gemini: React.FC<GeminiProps> = ({
       });
 
       wsClientRef.current.on('open', () => {
-        setConnectionStatus('connected');
+        updateConnectionStatus('connected');
         audioRecorderRef.current.on('data', (base64Audio) => {
-          if (connectionStatus === 'connected') {
+          if (connectionStatusRef.current === 'connected') {
             wsClientRef.current?.sendRealtimeInput([{
               data: base64Audio,
               mimeType: "audio/pcm;rate=16000"
@@ -225,7 +231,7 @@ const Gemini: React.FC<GeminiProps> = ({
     } catch (err: any) {
       console.error('Connection error:', err);
       setError(`Failed to connect: ${err.message}`);
-      setConnectionStatus('disconnected');
+      updateConnectionStatus('disconnected');
       audioRecorderRef.current.stop();
       if (audioStreamerRef.current) {
         audioStreamerRef.current.stop();
@@ -308,7 +314,7 @@ const Gemini: React.FC<GeminiProps> = ({
                   {[...Array(5)].map((_, i) => (
                     <div
                       key={i}
-                      className="mx-1 w-1 bg-primary-500 dark:bg-primary-700 rounded-full animate-wave"
+                      className="mx-1 w-1 rounded-full animate-wave bg-gray-500 dark:bg-gray-700"
                       style={{
                         height: `${20 + Math.random() * 20}px`,
                         animationDelay: `${i * 0.1}s`

@@ -96,3 +96,16 @@ body {
 code, pre {
   font-family: var(--font-geist-mono);
 }
+
+@keyframes wave {
+  0%, 100% {
+    transform: scaleY(0.5);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.animate-wave {
+  animation: wave 1s ease-in-out infinite;
+}

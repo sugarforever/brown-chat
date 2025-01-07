@@ -12,6 +12,14 @@ export interface LiveConfig {
         temperature?: number
         topP?: number
         topK?: number
+        responseModalities?: string[]
+        speechConfig?: {
+            voiceConfig?: {
+                prebuiltVoiceConfig?: {
+                    voiceName?: string
+                }
+            }
+        }
     }
     tools?: any[]
 }
