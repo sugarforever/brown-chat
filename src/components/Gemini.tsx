@@ -43,6 +43,11 @@ const Gemini: React.FC<GeminiProps> = ({
     },
   };
 
+  const openMeteoDeclaration = {
+    name: "open_meteo_forecast",
+    description: "Get weather forecast data from Open Meteo API for current location."
+  };
+
   const buttonStyles = `w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 relative ${connectionStatus === 'disconnected'
       ? 'bg-primary-500 hover:bg-primary-600 dark:bg-primary-700 dark:hover:bg-primary-800 text-primary-500'
       : connectionStatus === 'connecting'
@@ -77,9 +82,10 @@ const Gemini: React.FC<GeminiProps> = ({
 
   // Then define handleToolCall
   const handleToolCall = useCallback(async (toolCall: ToolCall) => {
-    const functionCall = toolCall.functionCalls.find(fc => fc.name === declaration.name)
+    const tavilyFunctionCall = toolCall.functionCalls.find(fc => fc.name === declaration.name);
+    const openMeteoFunctionCall = toolCall.functionCalls.find(fc => fc.name === openMeteoDeclaration.name);
 
-    if (functionCall && functionCall.args) {
+    if (tavilyFunctionCall && tavilyFunctionCall.args) {
       try {
         const tavilyApiKey = localStorage.getItem('tavily-api-key');
 
@@ -94,7 +100,7 @@ const Gemini: React.FC<GeminiProps> = ({
           },
           body: JSON.stringify({
             api_key: tavilyApiKey,
-            query: functionCall.args.query,
+            query: tavilyFunctionCall.args.query,
             search_depth: "basic",
             include_answer: false,
             include_images: true,
@@ -123,7 +129,7 @@ const Gemini: React.FC<GeminiProps> = ({
 
         wsClientRef.current?.sendToolResponse({
           functionResponses: [{
-            id: functionCall.id,
+            id: tavilyFunctionCall.id,
             name: declaration.name,
             response: { output: formattedResults }
           }]
@@ -133,9 +139,59 @@ const Gemini: React.FC<GeminiProps> = ({
         console.error('Tavily search error:', error);
         wsClientRef.current?.sendToolResponse({
           functionResponses: [{
-            id: functionCall.id,
+            id: tavilyFunctionCall.id,
             name: declaration.name,
             response: { output: `Error performing search: ${error.message}` }
+          }]
+        });
+      }
+    } else if (openMeteoFunctionCall) {
+      try {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject);
+        });
+
+        const { latitude, longitude } = position.coords;
+        const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,wind_speed_10m&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m`);
+
+        const data = await response.json();
+        let formattedResults = 'Weather Forecast:\n\n';
+
+        formattedResults += 'Current Weather:\n';
+        formattedResults += `Temperature: ${data.current.temperature_2m}${data.current_units.temperature_2m}\n`;
+        formattedResults += `Wind Speed: ${data.current.wind_speed_10m}${data.current_units.wind_speed_10m}\n\n`;
+
+        formattedResults += 'Hourly Forecast (next 24 hours):\n';
+        for (let i = 0; i < 24; i++) {
+          formattedResults += `Time: ${data.hourly.time[i]}\n`;
+          formattedResults += `Temperature: ${data.hourly.temperature_2m[i]}${data.hourly_units.temperature_2m}\n`;
+          formattedResults += `Humidity: ${data.hourly.relative_humidity_2m[i]}${data.hourly_units.relative_humidity_2m}\n`;
+          formattedResults += `Wind Speed: ${data.hourly.wind_speed_10m[i]}${data.hourly_units.wind_speed_10m}\n\n`;
+        }
+
+        wsClientRef.current?.sendToolResponse({
+          functionResponses: [{
+            id: openMeteoFunctionCall.id,
+            name: openMeteoDeclaration.name,
+            response: { output: formattedResults }
+          }]
+        });
+
+      } catch (error: any) {
+        console.error('Open Meteo API error:', error);
+        let errorMessage = error.message;
+        if (error.code === 1) { // Permission denied
+          errorMessage = 'Location access denied. Please enable location services to get weather forecast.';
+        } else if (error.code === 2) { // Position unavailable
+          errorMessage = 'Unable to determine your location. Please try again later.';
+        } else if (error.code === 3) { // Timeout
+          errorMessage = 'Location request timed out. Please try again.';
+        }
+        wsClientRef.current?.sendToolResponse({
+          functionResponses: [{
+            id: openMeteoFunctionCall.id,
+            name: openMeteoDeclaration.name,
+            response: { output: `Error getting weather forecast: ${errorMessage}` }
           }]
         });
       }
@@ -220,9 +276,14 @@ const Gemini: React.FC<GeminiProps> = ({
 
       const tools = [];
       const tavilyApiKey = localStorage.getItem('tavily-api-key');
+      const openMeteoEnabled = localStorage.getItem('use-open-meteo') === 'true';
 
       if (tavilyApiKey) {
         tools.push({ functionDeclarations: [declaration] });
+      }
+
+      if (openMeteoEnabled) {
+        tools.push({ functionDeclarations: [openMeteoDeclaration] });
       }
 
       await wsClientRef.current.connect({

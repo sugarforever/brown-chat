@@ -6,33 +6,39 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { KeyRound } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
-interface ApiKeys {
+interface Settings {
   geminiKey: string;
   tavilyKey: string;
+  useOpenMeteo: boolean;
 }
 
 export function SettingsForm() {
-  const [keys, setKeys] = useState<ApiKeys>({
+  const [settings, setSettings] = useState<Settings>({
     geminiKey: '',
-    tavilyKey: ''
+    tavilyKey: '',
+    useOpenMeteo: true
   });
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    // Load existing keys from localStorage
+    // Load existing settings from localStorage
     const storedGeminiKey = localStorage.getItem('gemini-api-key') || '';
     const storedTavilyKey = localStorage.getItem('tavily-api-key') || '';
-    setKeys({
+    const storedUseOpenMeteo = localStorage.getItem('use-open-meteo') !== 'false'; // default to true if not set
+    setSettings({
       geminiKey: storedGeminiKey,
-      tavilyKey: storedTavilyKey
+      tavilyKey: storedTavilyKey,
+      useOpenMeteo: storedUseOpenMeteo
     });
   }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    localStorage.setItem('gemini-api-key', keys.geminiKey);
-    localStorage.setItem('tavily-api-key', keys.tavilyKey);
+    localStorage.setItem('gemini-api-key', settings.geminiKey);
+    localStorage.setItem('tavily-api-key', settings.tavilyKey);
+    localStorage.setItem('use-open-meteo', settings.useOpenMeteo.toString());
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
@@ -42,10 +48,10 @@ export function SettingsForm() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <KeyRound className="w-5 h-5" />
-          API Keys
+          API Settings
         </CardTitle>
         <CardDescription>
-          Configure your API keys for Gemini and Tavily services. These keys are stored securely in your browser&apos;s local storage.
+          Configure your API keys and service preferences. These settings are stored securely in your browser&apos;s local storage.
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
@@ -55,8 +61,8 @@ export function SettingsForm() {
             <Input
               id="gemini-key"
               type="password"
-              value={keys.geminiKey}
-              onChange={(e) => setKeys(prev => ({ ...prev, geminiKey: e.target.value }))}
+              value={settings.geminiKey}
+              onChange={(e) => setSettings(prev => ({ ...prev, geminiKey: e.target.value }))}
               placeholder="Enter your Gemini API key"
             />
           </div>
@@ -66,10 +72,26 @@ export function SettingsForm() {
             <Input
               id="tavily-key"
               type="password"
-              value={keys.tavilyKey}
-              onChange={(e) => setKeys(prev => ({ ...prev, tavilyKey: e.target.value }))}
+              value={settings.tavilyKey}
+              onChange={(e) => setSettings(prev => ({ ...prev, tavilyKey: e.target.value }))}
               placeholder="Enter your Tavily API key"
             />
+          </div>
+
+          <div className="border rounded-lg p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="open-meteo" className="text-base font-medium">
+                Use Open-Meteo Weather API
+              </Label>
+              <Switch
+                id="open-meteo"
+                checked={settings.useOpenMeteo}
+                onCheckedChange={(checked) => setSettings(prev => ({ ...prev, useOpenMeteo: checked }))}
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Open-Meteo is an open-source weather API and offers free access for non-commercial use.
+            </p>
           </div>
         </CardContent>
 
