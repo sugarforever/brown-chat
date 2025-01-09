@@ -6,19 +6,31 @@ import { SchemaType } from "@google/generative-ai";
 import IconMicrophone from './icons/IconMicrophone';
 import IconSpinner from './icons/IconSpinner';
 import IconStop from './icons/IconStop';
-import { Mic } from 'lucide-react';
+import { Mic, Settings as SettingsIcon } from 'lucide-react';
 import { ToolCall } from '@/types/multimodal-live-types';
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface GeminiProps {
   defaultExpanded?: boolean;
   onExpandedChange?: (expanded: boolean) => void;
 }
 
+const VOICE_NAMES = ["Puck", "Charon", "Kore", "Fenrir", "Aoede"]
+
 const Gemini: React.FC<GeminiProps> = ({
   defaultExpanded = false,
   onExpandedChange
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const [showSettings, setShowSettings] = useState(false);
+  const [selectedVoice, setSelectedVoice] = useState(localStorage.getItem('voice-name') || VOICE_NAMES[0]);
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
   const [error, setError] = useState<string>('');
 
@@ -224,6 +236,7 @@ const Gemini: React.FC<GeminiProps> = ({
       setError('');
 
       const GEMINI_API_KEY = localStorage.getItem('gemini-api-key');
+      const selectedVoice = localStorage.getItem('voice-name') || VOICE_NAMES[0];
 
       if (!GEMINI_API_KEY) {
         throw new Error('Gemini API key not found. Please configure it in Settings.');
@@ -271,6 +284,10 @@ const Gemini: React.FC<GeminiProps> = ({
         }
       });
 
+      wsClientRef.current.on('content', (content) => {
+        console.log('Gemini Content Event:', content);
+      });
+
       // Register tool call handler
       wsClientRef.current.on('toolcall', handleToolCall);
 
@@ -292,9 +309,9 @@ const Gemini: React.FC<GeminiProps> = ({
           temperature: 0.7,
           topP: 0.8,
           topK: 40,
-          responseModalities: ["audio"],
+          responseModalities: ["AUDIO"],
           speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoede" } },
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: selectedVoice } },
           },
         },
         tools,
@@ -330,6 +347,11 @@ const Gemini: React.FC<GeminiProps> = ({
     setIsExpanded(expand);
   };
 
+  const handleVoiceChange = (voice: string) => {
+    setSelectedVoice(voice);
+    localStorage.setItem('voice-name', voice);
+  };
+
   return (
     <div className="">
       {!isExpanded ? (
@@ -355,13 +377,50 @@ const Gemini: React.FC<GeminiProps> = ({
                 </span>
               </div>
             </div>
-            <button
-              onClick={() => handleExpand(false)}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            >
-              <span className="text-xl">×</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowSettings(!showSettings)}
+                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <SettingsIcon className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => handleExpand(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                <span className="text-xl">×</span>
+              </button>
+            </div>
           </div>
+
+          {showSettings && (
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30">
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Conversation Settings</h3>
+
+                <div className="space-y-2">
+                  <Label htmlFor="voice-name" className="text-sm text-gray-700 dark:text-gray-300">AI Voice</Label>
+                  <Select value={selectedVoice} onValueChange={handleVoiceChange}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select a voice" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {VOICE_NAMES.map((voice) => (
+                        <SelectItem key={voice} value={voice}>
+                          {voice}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Placeholder for future settings */}
+                <div className="space-y-2 opacity-50">
+                  <div className="text-sm text-gray-500 dark:text-gray-400">More settings coming soon...</div>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="p-6 bg-white dark:bg-gray-800">
             <div className="space-y-6">

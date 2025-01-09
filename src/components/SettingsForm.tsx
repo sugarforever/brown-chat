@@ -26,7 +26,7 @@ export function SettingsForm() {
     // Load existing settings from localStorage
     const storedGeminiKey = localStorage.getItem('gemini-api-key') || '';
     const storedTavilyKey = localStorage.getItem('tavily-api-key') || '';
-    const storedUseOpenMeteo = localStorage.getItem('use-open-meteo') !== 'false'; // default to true if not set
+    const storedUseOpenMeteo = localStorage.getItem('use-open-meteo') !== 'false';
     setSettings({
       geminiKey: storedGeminiKey,
       tavilyKey: storedTavilyKey,
