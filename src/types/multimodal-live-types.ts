@@ -1,4 +1,4 @@
-import { Content, FunctionResponse, GenerativeContentBlob, Part } from "@google/generative-ai"
+import { Content, FunctionResponse, GenerationConfig, GenerativeContentBlob, Part, Tool } from "@google/generative-ai"
 
 export interface StreamingLog {
   date: Date
@@ -6,23 +6,23 @@ export interface StreamingLog {
   message: string | object
 }
 
-export interface LiveConfig {
-  model: string
-  generationConfig?: {
-    temperature?: number
-    topP?: number
-    topK?: number
-    responseModalities?: string[]
-    speechConfig?: {
-      voiceConfig?: {
-        prebuiltVoiceConfig?: {
-          voiceName?: string
-        }
-      }
-    }
-  }
-  tools?: any[]
-}
+export type LiveGenerationConfig = GenerationConfig & {
+  responseModalities: "text" | "audio" | "image";
+  speechConfig?: {
+    voiceConfig?: {
+      prebuiltVoiceConfig?: {
+        voiceName: "Puck" | "Charon" | "Kore" | "Fenrir" | "Aoede" | string;
+      };
+    };
+  };
+};
+
+export type LiveConfig = {
+  model: string;
+  systemInstruction?: { parts: Part[] };
+  generationConfig?: Partial<LiveGenerationConfig>;
+  tools?: Array<Tool | { googleSearch: {} } | { codeExecution: {} }>;
+};
 
 export interface SetupMessage {
   setup: LiveConfig
