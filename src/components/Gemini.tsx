@@ -7,7 +7,7 @@ import IconMicrophone from './icons/IconMicrophone';
 import IconSpinner from './icons/IconSpinner';
 import IconStop from './icons/IconStop';
 import { Mic, Settings as SettingsIcon } from 'lucide-react';
-import { ToolCall } from '@/types/multimodal-live-types';
+import { ServerContent, ToolCall } from '@/types/multimodal-live-types';
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -22,6 +22,25 @@ interface GeminiProps {
   onExpandedChange?: (expanded: boolean) => void;
 }
 
+interface Message {
+  content: string;
+  role: 'assistant' | 'system';
+}
+
+interface ContentPart {
+  text?: string;
+}
+
+interface ModelTurn {
+  parts: ContentPart[];
+}
+
+interface ContentMessage {
+  message: {
+    serverContent: ServerContent;
+  };
+}
+
 const VOICE_NAMES = ["Puck", "Charon", "Kore", "Fenrir", "Aoede"]
 
 const Gemini: React.FC<GeminiProps> = ({
@@ -30,6 +49,7 @@ const Gemini: React.FC<GeminiProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [showSettings, setShowSettings] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [selectedVoice, setSelectedVoice] = useState(localStorage.getItem('voice-name') || VOICE_NAMES[0]);
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
   const [error, setError] = useState<string>('');
@@ -52,6 +72,21 @@ const Gemini: React.FC<GeminiProps> = ({
         },
       },
       required: ["query"],
+    },
+  };
+
+  const showTextMessageDeclaration = {
+    name: "show_text_message",
+    description: "Receive a Markdown format text message and display in the chat interface.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        message: {
+          type: SchemaType.STRING,
+          description: "The message to display. The message should always be in Markdown format.",
+        },
+      },
+      required: ["message"],
     },
   };
 
@@ -96,8 +131,19 @@ const Gemini: React.FC<GeminiProps> = ({
   const handleToolCall = useCallback(async (toolCall: ToolCall) => {
     const tavilyFunctionCall = toolCall.functionCalls.find(fc => fc.name === declaration.name);
     const openMeteoFunctionCall = toolCall.functionCalls.find(fc => fc.name === openMeteoDeclaration.name);
+    const showTextMessageCall = toolCall.functionCalls.find(fc => fc.name === showTextMessageDeclaration.name);
 
-    if (tavilyFunctionCall && tavilyFunctionCall.args) {
+    if (showTextMessageCall && showTextMessageCall.args) {
+      const message = showTextMessageCall.args.message;
+      setMessages(prev => [...prev, { content: message, role: 'assistant' }]);
+      wsClientRef.current?.sendToolResponse({
+        functionResponses: [{
+          id: showTextMessageCall.id,
+          name: showTextMessageDeclaration.name,
+          response: { output: "Message displayed successfully" }
+        }]
+      });
+    } else if (tavilyFunctionCall && tavilyFunctionCall.args) {
       try {
         const tavilyApiKey = localStorage.getItem('tavily-api-key');
 
@@ -284,8 +330,12 @@ const Gemini: React.FC<GeminiProps> = ({
         }
       });
 
-      wsClientRef.current.on('content', (content) => {
+      wsClientRef.current.on('content', (content: ServerContent) => {
         console.log('Gemini Content Event:', content);
+        const text = content.modelTurn?.parts?.[0]?.text;
+        if (text) {
+          setMessages(prev => [...prev, { content: text, role: 'assistant' }]);
+        }
       });
 
       // Register tool call handler
@@ -303,13 +353,16 @@ const Gemini: React.FC<GeminiProps> = ({
         tools.push({ functionDeclarations: [openMeteoDeclaration] });
       }
 
+      // Always include the show_text_message tool
+      tools.push({ functionDeclarations: [showTextMessageDeclaration] });
+
       await wsClientRef.current.connect({
         model: 'models/gemini-2.0-flash-exp',
         generationConfig: {
           temperature: 0.7,
           topP: 0.8,
           topK: 40,
-          responseModalities: ["AUDIO"],
+          responseModalities: ["TEXT"],
           speechConfig: {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: selectedVoice } },
           },
@@ -421,6 +474,27 @@ const Gemini: React.FC<GeminiProps> = ({
               </div>
             </div>
           )}
+
+          <div className="max-h-[300px] overflow-y-auto border-b border-gray-200 dark:border-gray-700">
+            <div className="p-4 space-y-4">
+              {messages.map((message, index) => (
+                <div
+                  key={index}
+                  className={`flex ${message.role === 'assistant' ? 'justify-start' : 'justify-end'}`}
+                >
+                  <div
+                    className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                      message.role === 'assistant'
+                        ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
+                        : 'bg-primary-500 text-white'
+                    }`}
+                  >
+                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
           <div className="p-6 bg-white dark:bg-gray-800">
             <div className="space-y-6">
