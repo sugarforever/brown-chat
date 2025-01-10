@@ -24,10 +24,6 @@ interface GeminiProps {
   onExpandedChange?: (expanded: boolean) => void;
 }
 
-interface ContentPart {
-  text?: string;
-}
-
 const VOICE_NAMES = ["Puck", "Charon", "Kore", "Fenrir", "Aoede"]
 const RESPONSE_MODALITIES = ["TEXT", "AUDIO"] as const;
 type ResponseModality = typeof RESPONSE_MODALITIES[number];
