@@ -6,7 +6,7 @@ import { SchemaType } from "@google/generative-ai";
 import IconMicrophone from './icons/IconMicrophone';
 import IconSpinner from './icons/IconSpinner';
 import IconStop from './icons/IconStop';
-import { Mic, Settings as SettingsIcon } from 'lucide-react';
+import { Mic, Settings as SettingsIcon, KeyRound } from 'lucide-react';
 import { ServerContent, ToolCall } from '@/types/multimodal-live-types';
 import { Label } from "@/components/ui/label";
 import {
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { ChatMessage } from '@/types/chat';
 import Message from './Message';
+import { SettingsForm } from './SettingsForm';
 
 interface GeminiProps {
   defaultExpanded?: boolean;
@@ -34,6 +35,7 @@ const Gemini: React.FC<GeminiProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [showSettings, setShowSettings] = useState(false);
+  const [showApiSettings, setShowApiSettings] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [selectedVoice, setSelectedVoice] = useState(localStorage.getItem('voice-name') || VOICE_NAMES[0]);
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
@@ -85,10 +87,10 @@ const Gemini: React.FC<GeminiProps> = ({
   };
 
   const buttonStyles = `w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 relative ${connectionStatus === 'disconnected'
-      ? 'bg-primary-500 hover:bg-primary-600 dark:bg-primary-700 dark:hover:bg-primary-800 text-primary-500'
-      : connectionStatus === 'connecting'
-        ? 'bg-yellow-500 dark:bg-yellow-600 cursor-not-allowed'
-        : 'bg-red-500 hover:bg-red-600 dark:bg-red-700 dark:hover:bg-red-800 text-primary-500'
+    ? 'bg-primary-500 hover:bg-primary-600 dark:bg-primary-700 dark:hover:bg-primary-800 text-primary-500'
+    : connectionStatus === 'connecting'
+      ? 'bg-yellow-500 dark:bg-yellow-600 cursor-not-allowed'
+      : 'bg-red-500 hover:bg-red-600 dark:bg-red-700 dark:hover:bg-red-800 text-primary-500'
     }`;
 
   const statusText = {
@@ -441,7 +443,19 @@ const Gemini: React.FC<GeminiProps> = ({
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setShowSettings(!showSettings)}
+                onClick={() => {
+                  setShowSettings(false)
+                  setShowApiSettings(!showApiSettings)
+                }}
+                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <KeyRound className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => {
+                  setShowSettings(!showSettings)
+                  setShowApiSettings(false)
+                }}
                 className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 <SettingsIcon className="w-5 h-5" />
@@ -454,6 +468,12 @@ const Gemini: React.FC<GeminiProps> = ({
               </button>
             </div>
           </div>
+
+          {showApiSettings && (
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30">
+              <SettingsForm />
+            </div>
+          )}
 
           {showSettings && (
             <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30">
