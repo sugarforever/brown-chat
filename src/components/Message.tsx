@@ -34,8 +34,8 @@ const Message: React.FC<MessageProps> = ({ message }) => {
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
-              p: ({node, ...props}) => <p className="mb-1 last:mb-0" {...props} />,
-              a: ({node, href, ...props}) => {
+              p: ({...props}) => <p className="mb-1 last:mb-0" {...props} />,
+              a: ({href, ...props}) => {
                 const isUrl = href?.startsWith('http');
                 return (
                   <a
@@ -50,16 +50,16 @@ const Message: React.FC<MessageProps> = ({ message }) => {
                   </a>
                 );
               },
-              ul: ({node, ...props}) => <ul className="list-disc ml-4 mb-2" {...props} />,
-              ol: ({node, ...props}) => <ol className="list-decimal ml-4 mb-2" {...props} />,
-              li: ({node, ...props}) => (
+              ul: ({...props}) => <ul className="list-disc ml-4 mb-2" {...props} />,
+              ol: ({...props}) => <ol className="list-decimal ml-4 mb-2" {...props} />,
+              li: ({...props}) => (
                 <li className="mb-1">
                   <div className="flex flex-col">
                     {props.children}
                   </div>
                 </li>
               ),
-              code: ({node, inline, className, children, ...props}: any) => {
+              code: ({inline, children, ...props}: any) => {
                 if (inline && typeof children === 'string' && children.startsWith('http')) {
                   return (
                     <a

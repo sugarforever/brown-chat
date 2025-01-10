@@ -28,16 +28,6 @@ interface ContentPart {
   text?: string;
 }
 
-interface ModelTurn {
-  parts: ContentPart[];
-}
-
-interface ContentMessage {
-  message: {
-    serverContent: ServerContent;
-  };
-}
-
 const VOICE_NAMES = ["Puck", "Charon", "Kore", "Fenrir", "Aoede"]
 const RESPONSE_MODALITIES = ["TEXT", "AUDIO"] as const;
 type ResponseModality = typeof RESPONSE_MODALITIES[number];
