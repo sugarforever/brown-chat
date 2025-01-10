@@ -514,13 +514,20 @@ const Gemini: React.FC<GeminiProps> = ({
             </div>
           )}
 
-          <div className="max-h-[300px] overflow-y-auto border-b border-gray-200 dark:border-gray-700">
-            <div className="p-4 space-y-4">
-              {messages.map((message, index) => (
-                <Message key={index} message={message} />
-              ))}
+          {messages.length > 0 && (
+            <div
+              className="transition-[height] duration-300 ease-in-out overflow-hidden"
+              style={{ height: messages.length > 0 ? '540px' : '0px' }}
+            >
+              <div className="h-full max-h-[540px] overflow-y-auto border-b border-gray-200 dark:border-gray-700">
+                <div className="p-4 space-y-4">
+                  {messages.map((message, index) => (
+                    <Message key={index} message={message} />
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="p-6 bg-white dark:bg-gray-800">
             <div className="space-y-6">
