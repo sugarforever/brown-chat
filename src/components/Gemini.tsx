@@ -42,6 +42,8 @@ interface ContentMessage {
 }
 
 const VOICE_NAMES = ["Puck", "Charon", "Kore", "Fenrir", "Aoede"]
+const RESPONSE_MODALITIES = ["TEXT", "AUDIO"] as const;
+type ResponseModality = typeof RESPONSE_MODALITIES[number];
 
 const Gemini: React.FC<GeminiProps> = ({
   defaultExpanded = false,
@@ -54,6 +56,9 @@ const Gemini: React.FC<GeminiProps> = ({
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
   const [error, setError] = useState<string>('');
   const lastMessageTimestampRef = useRef<number>(0);
+  const [responseModality, setResponseModality] = useState<ResponseModality>(
+    (localStorage.getItem('response-modality') as ResponseModality) || "AUDIO"
+  );
 
   const wsClientRef = useRef<MultimodalLiveClient | null>(null);
   const audioRecorderRef = useRef<AudioRecorder>(new AudioRecorder());
@@ -378,7 +383,7 @@ const Gemini: React.FC<GeminiProps> = ({
           temperature: 0.7,
           topP: 0.8,
           topK: 40,
-          responseModalities: ["TEXT"],
+          responseModalities: [responseModality],
           speechConfig: {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: selectedVoice } },
           },
@@ -419,6 +424,11 @@ const Gemini: React.FC<GeminiProps> = ({
   const handleVoiceChange = (voice: string) => {
     setSelectedVoice(voice);
     localStorage.setItem('voice-name', voice);
+  };
+
+  const handleModalityChange = (modality: string) => {
+    setResponseModality(modality as ResponseModality);
+    localStorage.setItem('response-modality', modality);
   };
 
   return (
@@ -477,6 +487,22 @@ const Gemini: React.FC<GeminiProps> = ({
                       {VOICE_NAMES.map((voice) => (
                         <SelectItem key={voice} value={voice}>
                           {voice}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="response-modality" className="text-sm text-gray-700 dark:text-gray-300">Response Modality</Label>
+                  <Select value={responseModality} onValueChange={handleModalityChange}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select a response modality" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {RESPONSE_MODALITIES.map((modality) => (
+                        <SelectItem key={modality} value={modality}>
+                          {modality}
                         </SelectItem>
                       ))}
                     </SelectContent>
