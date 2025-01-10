@@ -7,7 +7,7 @@ import IconMicrophone from './icons/IconMicrophone';
 import IconSpinner from './icons/IconSpinner';
 import IconStop from './icons/IconStop';
 import { Mic, Settings as SettingsIcon } from 'lucide-react';
-import { ToolCall } from '@/types/multimodal-live-types';
+import { ServerContent, ToolCall } from '@/types/multimodal-live-types';
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -16,6 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ChatMessage } from '@/types/chat';
+import Message from './Message';
 
 interface GeminiProps {
   defaultExpanded?: boolean;
@@ -23,6 +25,8 @@ interface GeminiProps {
 }
 
 const VOICE_NAMES = ["Puck", "Charon", "Kore", "Fenrir", "Aoede"]
+const RESPONSE_MODALITIES = ["TEXT", "AUDIO"] as const;
+type ResponseModality = typeof RESPONSE_MODALITIES[number];
 
 const Gemini: React.FC<GeminiProps> = ({
   defaultExpanded = false,
@@ -30,9 +34,14 @@ const Gemini: React.FC<GeminiProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [showSettings, setShowSettings] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [selectedVoice, setSelectedVoice] = useState(localStorage.getItem('voice-name') || VOICE_NAMES[0]);
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
   const [error, setError] = useState<string>('');
+  const lastMessageTimestampRef = useRef<number>(0);
+  const [responseModality, setResponseModality] = useState<ResponseModality>(
+    (localStorage.getItem('response-modality') as ResponseModality) || "AUDIO"
+  );
 
   const wsClientRef = useRef<MultimodalLiveClient | null>(null);
   const audioRecorderRef = useRef<AudioRecorder>(new AudioRecorder());
@@ -52,6 +61,21 @@ const Gemini: React.FC<GeminiProps> = ({
         },
       },
       required: ["query"],
+    },
+  };
+
+  const showTextMessageDeclaration = {
+    name: "show_text_message",
+    description: "Receive a Markdown format text message and display in the chat interface.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        message: {
+          type: SchemaType.STRING,
+          description: "The message to display. The message should always be in Markdown format.",
+        },
+      },
+      required: ["message"],
     },
   };
 
@@ -96,8 +120,19 @@ const Gemini: React.FC<GeminiProps> = ({
   const handleToolCall = useCallback(async (toolCall: ToolCall) => {
     const tavilyFunctionCall = toolCall.functionCalls.find(fc => fc.name === declaration.name);
     const openMeteoFunctionCall = toolCall.functionCalls.find(fc => fc.name === openMeteoDeclaration.name);
+    const showTextMessageCall = toolCall.functionCalls.find(fc => fc.name === showTextMessageDeclaration.name);
 
-    if (tavilyFunctionCall && tavilyFunctionCall.args) {
+    if (showTextMessageCall && showTextMessageCall.args) {
+      const message = showTextMessageCall.args.message;
+      setMessages(prev => [...prev, { content: message, role: 'tool' }]);
+      wsClientRef.current?.sendToolResponse({
+        functionResponses: [{
+          id: showTextMessageCall.id,
+          name: showTextMessageDeclaration.name,
+          response: { output: "Message displayed successfully" }
+        }]
+      });
+    } else if (tavilyFunctionCall && tavilyFunctionCall.args) {
       try {
         const tavilyApiKey = localStorage.getItem('tavily-api-key');
 
@@ -284,8 +319,27 @@ const Gemini: React.FC<GeminiProps> = ({
         }
       });
 
-      wsClientRef.current.on('content', (content) => {
+      wsClientRef.current.on('content', (content: ServerContent) => {
         console.log('Gemini Content Event:', content);
+        const text = content.modelTurn?.parts?.[0]?.text;
+        if (text) {
+          const now = Date.now();
+          const delta = now - lastMessageTimestampRef.current;
+
+          setMessages(prev => {
+            if (lastMessageTimestampRef.current > 0 && delta < 500 && prev.length > 0) {
+              const newMessages = [...prev];
+              newMessages[newMessages.length - 1] = {
+                ...newMessages[newMessages.length - 1],
+                content: newMessages[newMessages.length - 1].content + " " + text
+              };
+              return newMessages;
+            } else {
+              return [...prev, { content: text, role: 'assistant' }];
+            }
+          });
+          lastMessageTimestampRef.current = now;
+        }
       });
 
       // Register tool call handler
@@ -303,13 +357,16 @@ const Gemini: React.FC<GeminiProps> = ({
         tools.push({ functionDeclarations: [openMeteoDeclaration] });
       }
 
+      // Always include the show_text_message tool
+      tools.push({ functionDeclarations: [showTextMessageDeclaration] });
+
       await wsClientRef.current.connect({
         model: 'models/gemini-2.0-flash-exp',
         generationConfig: {
           temperature: 0.7,
           topP: 0.8,
           topK: 40,
-          responseModalities: ["AUDIO"],
+          responseModalities: [responseModality],
           speechConfig: {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: selectedVoice } },
           },
@@ -350,6 +407,11 @@ const Gemini: React.FC<GeminiProps> = ({
   const handleVoiceChange = (voice: string) => {
     setSelectedVoice(voice);
     localStorage.setItem('voice-name', voice);
+  };
+
+  const handleModalityChange = (modality: string) => {
+    setResponseModality(modality as ResponseModality);
+    localStorage.setItem('response-modality', modality);
   };
 
   return (
@@ -414,9 +476,40 @@ const Gemini: React.FC<GeminiProps> = ({
                   </Select>
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="response-modality" className="text-sm text-gray-700 dark:text-gray-300">Response Modality</Label>
+                  <Select value={responseModality} onValueChange={handleModalityChange}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select a response modality" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {RESPONSE_MODALITIES.map((modality) => (
+                        <SelectItem key={modality} value={modality}>
+                          {modality}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 {/* Placeholder for future settings */}
                 <div className="space-y-2 opacity-50">
                   <div className="text-sm text-gray-500 dark:text-gray-400">More settings coming soon...</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {messages.length > 0 && (
+            <div
+              className="transition-[height] duration-300 ease-in-out overflow-hidden"
+              style={{ height: messages.length > 0 ? '540px' : '0px' }}
+            >
+              <div className="h-full max-h-[540px] overflow-y-auto border-b border-gray-200 dark:border-gray-700">
+                <div className="p-4 space-y-4">
+                  {messages.map((message, index) => (
+                    <Message key={index} message={message} />
+                  ))}
                 </div>
               </div>
             </div>
