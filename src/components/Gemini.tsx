@@ -53,6 +53,7 @@ const Gemini: React.FC<GeminiProps> = ({
   const [selectedVoice, setSelectedVoice] = useState(localStorage.getItem('voice-name') || VOICE_NAMES[0]);
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
   const [error, setError] = useState<string>('');
+  const lastMessageTimestampRef = useRef<number>(0);
 
   const wsClientRef = useRef<MultimodalLiveClient | null>(null);
   const audioRecorderRef = useRef<AudioRecorder>(new AudioRecorder());
@@ -334,7 +335,22 @@ const Gemini: React.FC<GeminiProps> = ({
         console.log('Gemini Content Event:', content);
         const text = content.modelTurn?.parts?.[0]?.text;
         if (text) {
-          setMessages(prev => [...prev, { content: text, role: 'assistant' }]);
+          const now = Date.now();
+          const delta = now - lastMessageTimestampRef.current;
+
+          setMessages(prev => {
+            if (lastMessageTimestampRef.current > 0 && delta < 500 && prev.length > 0) {
+              const newMessages = [...prev];
+              newMessages[newMessages.length - 1] = {
+                ...newMessages[newMessages.length - 1],
+                content: newMessages[newMessages.length - 1].content + " " + text
+              };
+              return newMessages;
+            } else {
+              return [...prev, { content: text, role: 'assistant' }];
+            }
+          });
+          lastMessageTimestampRef.current = now;
         }
       });
 
