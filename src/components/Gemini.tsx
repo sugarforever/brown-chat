@@ -26,7 +26,7 @@ interface GeminiProps {
 }
 
 const VOICE_NAMES = ["Puck", "Charon", "Kore", "Fenrir", "Aoede"]
-const RESPONSE_MODALITIES = ["TEXT", "AUDIO"] as const;
+const RESPONSE_MODALITIES = ["text", "audio", "image"] as const;
 type ResponseModality = typeof RESPONSE_MODALITIES[number];
 
 const Gemini: React.FC<GeminiProps> = ({
@@ -42,7 +42,10 @@ const Gemini: React.FC<GeminiProps> = ({
   const [error, setError] = useState<string>('');
   const lastMessageTimestampRef = useRef<number>(0);
   const [responseModality, setResponseModality] = useState<ResponseModality>(
-    (localStorage.getItem('response-modality') as ResponseModality) || "AUDIO"
+    (localStorage.getItem('response-modality') as ResponseModality) || "audio"
+  );
+  const [systemInstruction, setSystemInstruction] = useState<string>(
+    localStorage.getItem('system-instruction') || ''
   );
 
   const wsClientRef = useRef<MultimodalLiveClient | null>(null);
@@ -365,14 +368,19 @@ const Gemini: React.FC<GeminiProps> = ({
       await wsClientRef.current.connect({
         model: 'models/gemini-2.0-flash-exp',
         generationConfig: {
-          temperature: 0.7,
+          temperature: 0,
           topP: 0.8,
           topK: 40,
-          responseModalities: [responseModality],
+          responseModalities: responseModality,
           speechConfig: {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: selectedVoice } },
           },
         },
+        ...(systemInstruction && {
+          systemInstruction: {
+            parts: [{ text: systemInstruction }]
+          }
+        }),
         tools,
       });
 
@@ -414,6 +422,11 @@ const Gemini: React.FC<GeminiProps> = ({
   const handleModalityChange = (modality: string) => {
     setResponseModality(modality as ResponseModality);
     localStorage.setItem('response-modality', modality);
+  };
+
+  const handleSystemInstructionChange = (instruction: string) => {
+    setSystemInstruction(instruction);
+    localStorage.setItem('system-instruction', instruction);
   };
 
   return (
@@ -510,6 +523,17 @@ const Gemini: React.FC<GeminiProps> = ({
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="system-instruction" className="text-sm text-gray-700 dark:text-gray-300">System Instruction</Label>
+                  <textarea
+                    id="system-instruction"
+                    className="w-full min-h-[100px] p-2 text-sm rounded-md border border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    placeholder="Enter system instruction (optional)"
+                    value={systemInstruction}
+                    onChange={(e) => handleSystemInstructionChange(e.target.value)}
+                  />
                 </div>
 
                 {/* Placeholder for future settings */}
