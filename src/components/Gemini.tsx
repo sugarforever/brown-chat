@@ -16,15 +16,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ChatMessage } from '@/types/chat';
+import Message from './Message';
 
 interface GeminiProps {
   defaultExpanded?: boolean;
   onExpandedChange?: (expanded: boolean) => void;
-}
-
-interface Message {
-  content: string;
-  role: 'assistant' | 'system';
 }
 
 interface ContentPart {
@@ -51,7 +48,7 @@ const Gemini: React.FC<GeminiProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [showSettings, setShowSettings] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [selectedVoice, setSelectedVoice] = useState(localStorage.getItem('voice-name') || VOICE_NAMES[0]);
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
   const [error, setError] = useState<string>('');
@@ -141,7 +138,7 @@ const Gemini: React.FC<GeminiProps> = ({
 
     if (showTextMessageCall && showTextMessageCall.args) {
       const message = showTextMessageCall.args.message;
-      setMessages(prev => [...prev, { content: message, role: 'assistant' }]);
+      setMessages(prev => [...prev, { content: message, role: 'tool' }]);
       wsClientRef.current?.sendToolResponse({
         functionResponses: [{
           id: showTextMessageCall.id,
@@ -520,20 +517,7 @@ const Gemini: React.FC<GeminiProps> = ({
           <div className="max-h-[300px] overflow-y-auto border-b border-gray-200 dark:border-gray-700">
             <div className="p-4 space-y-4">
               {messages.map((message, index) => (
-                <div
-                  key={index}
-                  className={`flex ${message.role === 'assistant' ? 'justify-start' : 'justify-end'}`}
-                >
-                  <div
-                    className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                      message.role === 'assistant'
-                        ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
-                        : 'bg-primary-500 text-white'
-                    }`}
-                  >
-                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                  </div>
-                </div>
+                <Message key={index} message={message} />
               ))}
             </div>
           </div>
